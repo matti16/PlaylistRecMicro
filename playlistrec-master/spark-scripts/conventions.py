@@ -1,0 +1,16 @@
+__author__ = 'massimo'
+
+
+BUCKET = 'bucketName'
+CLIENT = 'client'
+GENERAL = 'general'
+ID = 'id'
+LINKEDINFO = 'linkedinfo'
+LOCATION = 'location'
+MODE = 'mode'
+OBJECTS = 'objects'
+OUT = 'out'
+PROP = 'prop'
+SPLIT = 'split'
+SUBJECTS = 'subjects'
+TS_json = 'ts'
