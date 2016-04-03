@@ -7,7 +7,8 @@ from os import path
 '''
 Matrix multiplication, similarity and kNN utility functions
 '''
-
+def pippo:
+    pass
 # rdd1,rdd2 in the form ((row_idx, col_idx), value)
 # computes the matrix-matrix product RDD1 * RDD2^t
 def matmul_join(rdd1, rdd2):
