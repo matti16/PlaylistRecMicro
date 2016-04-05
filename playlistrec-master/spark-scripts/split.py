@@ -8,8 +8,8 @@ import json
 import boto
 import os
 from pyspark import StorageLevel
-from conventions import *
-from utils import *
+#from conventions import *
+#from utils import *
 
 def testTrainUserSplit(x, percUsTr):
     if percUsTr * 100 <= np.random.randint(0, 100): return (x, 1)
