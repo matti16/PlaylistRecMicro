@@ -1,9 +1,9 @@
-import nltk
 import string
 
+
 def tokenize_song(x):
-    out = x.translate(x.maketrans("","", string.punctuation))
-    tokens = nltk.word_tokenize(out)
+    out = ''.join(ch for ch in x if ch not in string.punctuation)
+    tokens = [i for i in out.split(" ") if len(i) and not i in string.punctuation]
     return [t.lower() for t in tokens]
     
 
