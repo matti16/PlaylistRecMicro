@@ -108,12 +108,8 @@ def splitter(conf):
     prop = conf[SPLIT][PROP]
     pathOUT = conf[SPLIT][OUT]
     # check for already existing splits
-    split_path = os.path.join(conf['general']['clientname'], conf['split']['name'])
-    try:
-        tryRDD = sc.parallelize(range(100))
-        tryRDD.saveAsTextFile(conf[GENERAL][BUCKET] + split_path)
-    except:
-        print 'Exception with split path, skipping...'
+    if os.path.exists(pathOUT):
+        print 'Split already exists. Passing...'
         return None
 
 
@@ -162,7 +158,7 @@ def splitter(conf):
             .join(testUsersRDD).map(lambda x: (long(x[1][0]['ts']), x[1][0]))
 
         testRDD.filter(lambda x: long(x[0]) <= TS).map(lambda x: json.dumps(x[1])) \
-            .saveAsTextFile(os.path.join(pathOUT + "test/batchTraining/"))
+            .saveAsTextFile(os.path.join(pathOUT, "test/batchTraining/"))
 
         if mode == 'session':
             recAndGt = testRDD.filter(lambda x: long(x[0]) > TS) \
@@ -177,12 +173,12 @@ def splitter(conf):
         recAndGt.filter(lambda x: x['type'] == 'request').map(lambda x: json.dumps(x)) \
             .saveAsTextFile(os.path.join(pathOUT, "test/onlineTraining/"))
         recAndGt.filter(lambda x: x['type'] != 'request').map(lambda x: json.dumps(x)) \
-            .saveAsTextFile(os.path.join(pathOUT + "GT/"))
+            .saveAsTextFile(os.path.join(pathOUT, "GT/"))
 
     if mode == 'ts-1' or mode == 'ts-multi':
         splitTestTrain = readDataset2.map(lambda x: (x[1]['ts'], x[1])).persist()
         splitTestTrain.filter(lambda x: long(x[0]) <= TS).map(lambda x: json.dumps(x[1])) \
-            .saveAsTextFile(pathOUT + "train/")
+            .saveAsTextFile(pathOUT + "/train/")
         test = splitTestTrain.filter(lambda x: long(x[0]) > TS)
         if mode == 'ts-1':
             recAndGt = test.flatMap(lambda x: gt1Creator(x[1], prop))
@@ -191,6 +187,6 @@ def splitter(conf):
                 .union(test.map(lambda x: (x[1]['linkedinfo']['subjects'][0]['id'], x)) \
                        .reduceByKey(lambda x, y: x).map(lambda x: gt1Creator(x[1][1], prop, mode='req', TS=TS)))
         recAndGt.filter(lambda x: x['type'] == 'request').map(lambda x: json.dumps(x)).repartition(16) \
-            .saveAsTextFile(os.path.join(pathOUT + "test/request/"))
+            .saveAsTextFile(os.path.join(pathOUT, "test/request/"))
         recAndGt.filter(lambda x: x['type'] != 'request').map(lambda x: json.dumps(x)).repartition(16) \
-            .saveAsTextFile(os.path.join(pathOUT + "GT/"))
+            .saveAsTextFile(os.path.join(pathOUT, "GT/"))
