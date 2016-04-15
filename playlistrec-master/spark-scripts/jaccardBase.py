@@ -9,8 +9,10 @@ def tokenize_song(x):
 
 def jaccard_similarity(x, y):
     num = len( set(x).intersection(set(y)) )
+    if num == 0:
+        return 0
     den = len( set(x).union(set(y)) )
-    return num / den
+    return float(num) / den
     
 
 def classify(x, y, treshold = 0.5):
