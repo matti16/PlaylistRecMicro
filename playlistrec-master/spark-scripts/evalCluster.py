@@ -70,12 +70,9 @@ def computeMetrics(conf, recRDD):
      .saveAsTextFile(metricsPath))
     print "%s successfully written to %s" % (conf['evaluation']['name'], metricsPath)
 
-
-def computeMetrics_new(conf):
-    basePath = path.join("s3n://", conf['general']['bucketName'], conf['general']['clientname'])
+def computeMetrics_new(conf, recRDD):
+    splitPath = path.join(conf['general']['bucketName'], conf['general']['clientname'])
     # basePath = "s3n://" + conf['general']['bucketName'] + "/"+conf['general']['clientname']+"/"
-    splitPath = path.join(basePath, conf['split']['name'])
-    # splitPath = basePath+conf['split']['name']+"/"
     GTpath = path.join(splitPath, "GT")
     # GTpath = splitPath+"GT"
 
@@ -87,8 +84,9 @@ def computeMetrics_new(conf):
     recPath = path.join(confPath, "recommendations")
     # recPath = splitPath+"/Rec/"+ conf['algo']['name']+"/recommendations/"
 
-    gtRDD = sc.textFile(GTpath).map(lambda x: json.loads(x)).persist(StorageLevel.MEMORY_AND_DISK)
-    recRDD = sc.textFile(recPath).map(lambda x: json.loads(x)).persist(StorageLevel.MEMORY_AND_DISK)
+    gtRDD = sc.textFile(GTpath).map(lambda x: json.loads(x))
+    recRDD = recRDD.map(lambda x: json.loads(x))
+
     recommendationRDD = recRDD \
         .flatMap(lambda x: ([(x['id'], (k['id'], k['rank'])) for k in x['linkedinfo']['response']]))
 
@@ -100,7 +98,7 @@ def computeMetrics_new(conf):
                              range(len(x['linkedinfo']['objects']))]))
 
         hitRDDPart = recommendationRDD.join(groundTruthRDD).filter(lambda x: x[1][0][0] == x[1][1][0])
-        hitRDD = hitRDDPart.map(lambda x: (x[0], x[1][0][1], 1.0, x[1][1][1])).persist(StorageLevel.MEMORY_AND_DISK)
+        hitRDD = hitRDDPart.map(lambda x: (x[0], x[1][0][1], 1.0, x[1][1][1]))
         totRec = float(groundTruthRDD.count())
         ## recall@N
         for n in conf['evaluation']['metric']['prop']['N']:
@@ -120,7 +118,7 @@ def computeMetrics_new(conf):
             temp['linkedinfo']['subjects'][0]['splitName'] = conf['split']['name']
             temp['linkedinfo']['subjects'][0]['algoName'] = conf['algo']['name']
             result.append(temp)
-    metricsPath = path.join(confPath, conf['evaluation']['name'], "metrics")
+    metricsPath = path.join(confPath, conf['evaluation']['name'], "metrics_new")
     (sc
      .parallelize(result)
      .map(lambda x: json.dumps(x))

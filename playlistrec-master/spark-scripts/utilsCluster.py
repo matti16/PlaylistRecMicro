@@ -82,35 +82,46 @@ def extract_ids(x):
 def plug_songs(x):
     rec_size = conf['split']['reclistSize']
     rec_dict = json.loads(x[0])
-    rec_dict['linkedinfo']['respone'] = []
+    rec_dict['linkedinfo']['response'] = []
     sorted_songs = sorted(x[1], key = itemgetter(0))
     inserted = 0
     for i in sorted_songs:
         for j in i[1]:
             entry = {"type": "track", "id": j, "rank": inserted}
-            rec_dict['linkedinfo']['respone'].append(entry)
+            rec_dict['linkedinfo']['response'].append(entry)
             inserted += 1
             if inserted >= rec_size:
                 return json.dumps(rec_dict)
     return json.dumps(rec_dict)
 
+
+#All the songs in a cluster are good for the recommendation
+def all_cluster(x):
+    rec_dict = json.loads(x[0])
+    rec_dict['linkedinfo']['response'] = []
+    for i in x[1]:
+        for j in i[1]:
+            entry = {"type": "track", "id": j, "rank": i[0]}
+            rec_dict['linkedinfo']['respone'].append(entry)
+    return json.dumps(rec_dict)
+
+
 #Pick the song with highest ID
 def plug_one_song(x):
-    rec_size = conf['split']['reclistSize']
     rec_dict = json.loads(x[0])
-    rec_dict['linkedinfo']['respone'] = []
+    rec_dict['linkedinfo']['response'] = []
     sorted_songs = sorted(x[1], key = itemgetter(0))
     inserted = 0
     for i in sorted_songs:
         songs = i[1]
         song = min(songs)
         entry = {"type": "track", "id": song, "rank": i[0]}
-        rec_dict['linkedinfo']['respone'].append(entry)
+        rec_dict['linkedinfo']['respones'].append(entry)
 
     return json.dumps(rec_dict)
             
 
-def mapClusterRecToListOfSongs(recRDD, clusterRDD):
+def mapClusterRecToListOfSongs(recRDD, clusterRDD, option = 0):
     
     recFlatRDD = recRDD.flatMap(extract_ids)
     #We have ClusterID -> (rank, Rec) and we join with ClusterIdD -> [songs]
@@ -118,7 +129,11 @@ def mapClusterRecToListOfSongs(recRDD, clusterRDD):
     #We have now (ClusterID, ( (rank, Rec), [songs]) )
     recSub = recJoinRDD.map(lambda x: (json.dumps(x[1][0][1]), (x[1][0][0], x[1][1])))
     #We extract (Rec, rank, [songs]) and griup by Rec. Then we plug the songs
-    recAgg = recSub.groupByKey().map(plug_one_song)
+    if option == 0:
+        recAgg = recSub.groupByKey().map(plug_songs)
+    elif option == 1:
+        recAgg = recSub.groupByKey().map(plug_one_song)
+    else:
+        recAgg = recSub.groupByKey().map(all_cluster)
     
-    recAgg.count()
     return recAgg
