@@ -141,7 +141,7 @@ def bestTracks(pl_rec, excluded_tracks, N=100):
     for i in l:
         tracks = []
         for t in i[0]:
-            if t not in excluded_tracks_set:
+            if t not in excluded_tracks_set and t not in resList:
                 tracks.append((t, rank))
                 rank += 1
         resList.extend(tracks)
