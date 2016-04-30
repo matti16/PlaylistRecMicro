@@ -10,6 +10,18 @@ Average Percentage of Uniqueness: 99.9697073265 %
 Percentage of Unique playlists: 98.701003676 %
 
 jaccardBase9:
-Clusters after join: 466244 (OK)
+Songs after join: 466244 (OK)
+Uniqe Clusters: 463223
+Scale: 0.99352056005
+
 Average Percentage of Uniqueness: 99.9498161896 %
 Percentage of Unique playlists: 97.9472140762 %
+
+
+jaccardBase751:
+Songs after join: 466244 (OK)
+Uniqe Clusters: 461249
+Scale: 0.989286725406
+
+Average Percentage of Uniqueness: 99.9277625288 %
+Percentage of Unique playlists: 97.2140762463 %
