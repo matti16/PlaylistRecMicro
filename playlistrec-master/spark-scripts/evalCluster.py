@@ -91,6 +91,7 @@ def computeMetrics_precision(conf, recRDD):
 
     gtRDD = sc.textFile(GTpath).map(lambda x: json.loads(x))
     recRDD = recRDD.map(lambda x: json.loads(x))
+    n_rec = recRDD.count()
 
     recommendationRDD = recRDD \
         .flatMap(lambda x: ([(x['id'], (k['id'], k['rank'], x)) for k in x['linkedinfo']['response']]))
@@ -106,10 +107,9 @@ def computeMetrics_precision(conf, recRDD):
 
     hitRDD = hitRDDPart.map(lambda x: (x[0], x[1][0][1], 1.0))
     '''
-    {"type": "metric", "id": -1, "ts" : -1, "properties": {"name": "recall@20" ,"value": 0.25}, 
+    {"type": "metric", "id": -1, "ts" : -1, "properties": {"name": "precision@20" ,"value": 0.25}, 
     "linkedinfo":{"subjects":[], "objects" : [] }}
     '''
-    totRec = float(groundTruthRDD.count())
     result = []
 
     for n in conf['evaluation']['metric']['prop']['N']:
@@ -121,7 +121,7 @@ def computeMetrics_precision(conf, recRDD):
         temp['properties']['name'] = conf['evaluation']['name']
         temp['evaluation'] = {}
         temp['evaluation']['N'] = n
-        temp['evaluation']['value'] = hitRDD.filter(lambda x: x[1] < n).map(lambda x: x[2]).sum() / totRec
+        temp['evaluation']['value'] = hitRDD.filter(lambda x: x[1] < n).map(lambda x: x[2]).sum() / (n*n_rec)
         temp['linkedinfo'] = {}
         temp['linkedinfo']['subjects'] = []
         temp['linkedinfo']['subjects'].append({})

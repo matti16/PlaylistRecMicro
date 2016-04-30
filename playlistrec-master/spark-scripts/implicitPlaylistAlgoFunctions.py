@@ -136,12 +136,14 @@ def bestTracks(pl_rec, excluded_tracks, N=100):
     excluded_tracks_set = set(excluded_tracks)
     l = list(pl_rec)
     l.sort(key=lambda x: float(x[1]), reverse=True)
+    present = set()
     resList = []
     rank = 0
     for i in l:
         tracks = []
         for t in i[0]:
-            if t not in excluded_tracks_set and t not in resList:
+            if t not in excluded_tracks_set and t not in present:
+                present.add(t)
                 tracks.append((t, rank))
                 rank += 1
         resList.extend(tracks)
