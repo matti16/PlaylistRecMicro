@@ -137,7 +137,7 @@ def plug_one_song(x):
     return json.dumps(rec_dict)
             
 
-def mapClusterRecToListOfSongs(recRDD, clusterRDD, option = "plug_songs"):
+def mapClusterRecToListOfSongs(recRDD, clusterRDD, option = "all_cluster"):
     
     recFlatRDD = recRDD.flatMap(extract_ids)
     #We have ClusterID -> (rank, Rec) and we join with ClusterIdD -> [songs]
