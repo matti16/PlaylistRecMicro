@@ -12,11 +12,26 @@ def map_hits(x, n):
     try:
         result = 0
         ranks_used = set()
+        id_used = set()
+        gt = x[1][1]
+
         for rec in x[1][0]:
-            if rec[0] in x[1][1] and rec[1] < n:
-                if not rec[1] in ranks_used:
-                    ranks_used.add(rec[1])
-                    result += 1
+            rec_id = rec[0]
+            rec_rank = rec[1]
+
+            if rec_rank >= n:
+                continue
+
+            if rec_rank in ranks_used:
+                continue
+            if rec_id in id_used:
+                continue
+            
+            if rec_id in gt:
+                ranks_used.add(rec_rank)
+                id_used.add(rec_id)
+                result += 1
+
     except Exception:
         raise Exception(str(x))
     return result
@@ -26,12 +41,14 @@ def map_hits_with_loss(x, n):
     try:
         result = 0
         ranks_used = set()
+        id_used = set()
         for rec in x[1][0]:
             if rec[0] in x[1][1] and rec[1] < n:
-                if not rec[1] in ranks_used:
+                if not rec[1] in ranks_used and not rec[0] in id_used:
                     ranks_used.add(rec[1])
+                    id_used.add(rec[0])
                     result += 1
-                else:
+                elif rec[1] in ranks_used:
                     result -= 1
     except Exception:
         raise Exception(str(x))
@@ -53,7 +70,7 @@ def map_loss(x,n):
     return result
 
 
-def computeNewRecallPrecision(conf, recRDD, loss = False):
+def computeNewRecallPrecision(conf, recRDD, loss = False, plain = False):
     splitPath = path.join(conf['general']['bucketName'], conf['general']['clientname'])
     # basePath = "s3n://" + conf['general']['bucketName'] + "/"+conf['general']['clientname']+"/"
     GTpath = path.join(splitPath, "GT")
@@ -69,7 +86,7 @@ def computeNewRecallPrecision(conf, recRDD, loss = False):
 
     gtRDD = sc.textFile(GTpath).map(lambda x: json.loads(x))
     recRDD = recRDD.map(lambda x: json.loads(x))
-    n_rec = float(recRDD.count())
+    n_rec = float(gtRDD.count())
 
     recRDD = recRDD.map(lambda x: (x['id'], [(i['id'], i['rank']) for i in x['linkedinfo']['response']]))
 
@@ -88,7 +105,19 @@ def computeNewRecallPrecision(conf, recRDD, loss = False):
     totRec = float(groundTruthRDD.count())
     result = []
 
-    conf['evaluation']['name'] = 'newRecall@N' if not loss else 'newLossRecall@N'
+    if not plain:
+        conf['evaluation']['name'] = 'newRecall@N' if not loss else 'newLossRecall@N'
+    else:
+        conf['evaluation']['name'] = 'plain/newRecall@N' if not loss else 'plain/newLossRecall@N'
+
+
+    values = {}
+    for n in conf['evaluation']['metric']['prop']['N']:
+        if not loss:
+            values[n] = hitRDD.map(lambda x: map_hits(x, n)).sum()
+        else:
+            values[n] = hitRDD.map(lambda x: map_hits_with_loss(x, n)).sum()
+
 
     for n in conf['evaluation']['metric']['prop']['N']:
         temp = {}
@@ -99,10 +128,7 @@ def computeNewRecallPrecision(conf, recRDD, loss = False):
         temp['properties']['name'] = conf['evaluation']['name']
         temp['evaluation'] = {}
         temp['evaluation']['N'] = n
-        if not loss:
-            temp['evaluation']['value'] = hitRDD.map(lambda x: map_hits(x, n)).sum() / totRec
-        else:
-            temp['evaluation']['value'] = hitRDD.map(lambda x: map_hits_with_loss(x, n)).sum() / totRec
+        temp['evaluation']['value'] = float(values[n]) / totRec
         temp['linkedinfo'] = {}
         temp['linkedinfo']['subjects'] = []
         temp['linkedinfo']['subjects'].append({})
@@ -121,7 +147,11 @@ def computeNewRecallPrecision(conf, recRDD, loss = False):
 
     '''COMPUTE PRECISION'''
     result = []
-    conf['evaluation']['name'] = 'newPrecision@N' if not loss else 'newLossPrecision@N'
+
+    if not plain:
+        conf['evaluation']['name'] = 'newPrecision@N' if not loss else 'newLossPrecision@N'
+    else:
+        conf['evaluation']['name'] = 'plain/newPrecision@N' if not loss else 'plain/newLossPrecision@N'
 
     for n in conf['evaluation']['metric']['prop']['N']:
         temp = {}
@@ -132,10 +162,7 @@ def computeNewRecallPrecision(conf, recRDD, loss = False):
         temp['properties']['name'] = conf['evaluation']['name']
         temp['evaluation'] = {}
         temp['evaluation']['N'] = n
-        if not loss:
-            temp['evaluation']['value'] = hitRDD.map(lambda x: map_hits(x, n)).sum() / (n*n_rec)
-        else:
-            temp['evaluation']['value'] = hitRDD.map(lambda x: map_hits_with_loss(x, n)).sum() / (n*n_rec)
+        temp['evaluation']['value'] = float(values[n]) / (n*n_rec)
         temp['linkedinfo'] = {}
         temp['linkedinfo']['subjects'] = []
         temp['linkedinfo']['subjects'].append({})
