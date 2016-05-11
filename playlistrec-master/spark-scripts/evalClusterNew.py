@@ -70,7 +70,9 @@ def map_loss(x,n):
     return result
 
 
-def computeNewRecallPrecision(conf, recRDD, loss = False, plain = False):
+def computeNewRecallPrecision(conf, recRDD, loss = False, plain = False, path):
+    DATA_PATH = '/home/jovyan/work/data/mattia/results'
+
     splitPath = path.join(conf['general']['bucketName'], conf['general']['clientname'])
     # basePath = "s3n://" + conf['general']['bucketName'] + "/"+conf['general']['clientname']+"/"
     GTpath = path.join(splitPath, "GT")
@@ -135,12 +137,21 @@ def computeNewRecallPrecision(conf, recRDD, loss = False, plain = False):
         temp['linkedinfo']['subjects'][0]['splitName'] = conf['split']['name']
         temp['linkedinfo']['subjects'][0]['algoName'] = conf['algo']['name']
         result.append(temp)
+
+
+    with open(path.join(DATA_PATH, path, 'recall@N'), 'w') as f:
+        for i in result:
+            line = json.dumps(i)
+            f.write(i + '\n')
+
+    '''
     metricsPath = path.join(confPath, conf['evaluation']['name'], "metrics")
     (sc
      .parallelize(result)
      .map(lambda x: json.dumps(x))
      .repartition(1)
      .saveAsTextFile(metricsPath))
+     '''
     print "%s successfully written to %s" % (conf['evaluation']['name'], metricsPath)
 
 
@@ -169,12 +180,21 @@ def computeNewRecallPrecision(conf, recRDD, loss = False, plain = False):
         temp['linkedinfo']['subjects'][0]['splitName'] = conf['split']['name']
         temp['linkedinfo']['subjects'][0]['algoName'] = conf['algo']['name']
         result.append(temp)
+
+
+    with open(path.join(DATA_PATH, path, 'precision@N'), 'w') as f:
+        for i in result:
+            line = json.dumps(i)
+            f.write(i + '\n')
+
+    '''
     metricsPath = path.join(confPath, conf['evaluation']['name'], "metrics")
     (sc
      .parallelize(result)
      .map(lambda x: json.dumps(x))
      .repartition(1)
      .saveAsTextFile(metricsPath))
+     '''
     print "%s successfully written to %s" % (conf['evaluation']['name'], metricsPath)
 
 

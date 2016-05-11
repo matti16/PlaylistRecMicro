@@ -73,7 +73,7 @@ def computeIntraSessionJaccardOriginalSessionId(list_of_sessions, shrinkage):
     return jaccard_intra_sessions, nsessions
 
 
-def compute_jaccard_index(set_1, set_2, shrinkage=10):
+def compute_jaccard_index(set_1, set_2, shrinkage=5):
     n = len(set_1.intersection(set_2))
     den = float(len(set_1) + len(set_2) - n)
     if n == 0 or den == 0:
