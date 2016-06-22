@@ -70,20 +70,24 @@ def map_loss(x,n):
     return result
 
 
-def computeNewRecallPrecision(conf, recRDD, loss = False, plain = False, path):
-    DATA_PATH = '/home/jovyan/work/data/mattia/results'
+def computeNewRecallPrecision(conf, recRDD, loss = False, plain = False, path = "test"):
+    DATA_PATH = '/home/jovyan/work/data/mattia/resultsNew'
 
-    splitPath = path.join(conf['general']['bucketName'], conf['general']['clientname'])
+    directory = os.path.join(DATA_PATH, path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    splitPath = os.path.join(conf['general']['bucketName'], conf['general']['clientname'])
     # basePath = "s3n://" + conf['general']['bucketName'] + "/"+conf['general']['clientname']+"/"
-    GTpath = path.join(splitPath, "GT")
+    GTpath = os.path.join(splitPath, "GT")
     # GTpath = splitPath+"GT"
 
     algo_conf = conf['algo']['name'] + '_' + \
                 '#'.join([str(v) for k, v in conf['algo']['props'].iteritems()])
     algo_conf = re.sub(r'[^A-Za-z0-9#_]', '', algo_conf)
 
-    confPath = path.join(splitPath, 'Rec', algo_conf)
-    recPath = path.join(confPath, "recommendations")
+    confPath = os.path.join(splitPath, 'Rec', algo_conf)
+    recPath = os.path.join(confPath, "recommendations")
     # recPath = splitPath+"/Rec/"+ conf['algo']['name']+"/recommendations/"
 
     gtRDD = sc.textFile(GTpath).map(lambda x: json.loads(x))
@@ -139,10 +143,12 @@ def computeNewRecallPrecision(conf, recRDD, loss = False, plain = False, path):
         result.append(temp)
 
 
-    with open(path.join(DATA_PATH, path, 'recall@N'), 'w') as f:
+
+    file_recall = os.path.join(DATA_PATH, path, 'recall@N')
+    with open(file_recall, 'w') as f:
         for i in result:
             line = json.dumps(i)
-            f.write(i + '\n')
+            f.write(line + '\n')
 
     '''
     metricsPath = path.join(confPath, conf['evaluation']['name'], "metrics")
@@ -151,8 +157,9 @@ def computeNewRecallPrecision(conf, recRDD, loss = False, plain = False, path):
      .map(lambda x: json.dumps(x))
      .repartition(1)
      .saveAsTextFile(metricsPath))
-     '''
     print "%s successfully written to %s" % (conf['evaluation']['name'], metricsPath)
+    '''
+    print "%s successfully written to %s" % (conf['evaluation']['name'], file_recall)
 
 
 
@@ -182,10 +189,11 @@ def computeNewRecallPrecision(conf, recRDD, loss = False, plain = False, path):
         result.append(temp)
 
 
-    with open(path.join(DATA_PATH, path, 'precision@N'), 'w') as f:
+    file_precision = os.path.join(DATA_PATH, path, 'precision@N')
+    with open(file_precision, 'w') as f:
         for i in result:
             line = json.dumps(i)
-            f.write(i + '\n')
+            f.write(line + '\n')
 
     '''
     metricsPath = path.join(confPath, conf['evaluation']['name'], "metrics")
@@ -194,8 +202,9 @@ def computeNewRecallPrecision(conf, recRDD, loss = False, plain = False, path):
      .map(lambda x: json.dumps(x))
      .repartition(1)
      .saveAsTextFile(metricsPath))
-     '''
     print "%s successfully written to %s" % (conf['evaluation']['name'], metricsPath)
+    '''
+    print "%s successfully written to %s" % (conf['evaluation']['name'], file_precision)
 
 
 
@@ -267,3 +276,72 @@ def computeClusterLoss(conf, recRDD):
      .repartition(1)
      .saveAsTextFile(metricsPath))
     print "%s successfully written to %s" % (conf['evaluation']['name'], metricsPath)
+
+
+
+from operator import itemgetter
+
+def map_hits_session(x, n):
+    try:
+        result = 0
+        ranks_used = set()
+        id_used = set()
+        gt = x[1][1]
+
+
+        for rec in sorted(x[1][0], key = itemgetter(1)):
+            rec_id = rec[0]
+            rec_rank = rec[1]
+
+            if int(rec_rank) >= n:
+                break;
+
+            if rec_rank in ranks_used:
+                continue
+            if rec_id in id_used:
+                continue
+            
+            if rec_id in gt:
+                ranks_used.add(rec_rank)
+                id_used.add(rec_id)
+                result += 1
+        return (x[0], result, len(x[1][0]))
+    except Exception:
+        raise Exception(str(x))
+
+    
+
+
+
+def computeHitSessions(conf, recRDD):
+
+    splitPath = os.path.join(conf['general']['bucketName'], conf['general']['clientname'])
+    # basePath = "s3n://" + conf['general']['bucketName'] + "/"+conf['general']['clientname']+"/"
+    GTpath = os.path.join(splitPath, "GT")
+    # GTpath = splitPath+"GT"
+
+    algo_conf = conf['algo']['name'] + '_' + \
+                '#'.join([str(v) for k, v in conf['algo']['props'].iteritems()])
+    algo_conf = re.sub(r'[^A-Za-z0-9#_]', '', algo_conf)
+
+    confPath = os.path.join(splitPath, 'Rec', algo_conf)
+    recPath = os.path.join(confPath, "recommendations")
+    # recPath = splitPath+"/Rec/"+ conf['algo']['name']+"/recommendations/"
+
+    gtRDD = sc.textFile(GTpath).map(lambda x: json.loads(x))
+    recRDD = recRDD.map(lambda x: json.loads(x))
+
+    recRDD = recRDD.map(lambda x: (x['id'], [(i['id'], i['rank']) for i in x['linkedinfo']['response']]))
+
+    groundTruthRDD = gtRDD \
+        .flatMap(lambda x: ([(x['linkedinfo']['gt'][0]['id'], (k['id'], x)) for k in x['linkedinfo']['objects']]))
+
+    gtRDD = gtRDD.map(lambda x: (x['linkedinfo']['gt'][0]['id'], [i['id'] for i in x['linkedinfo']['objects']]))
+
+    hitRDD = recRDD.join(gtRDD)
+
+    sessionsHits = sc.parallelize([])
+    for n in conf['evaluation']['metric']['prop']['N']:
+    	sessionsHits = sessionsHits.union(hitRDD.map(lambda x: (n,map_hits_session(x, n))))
+
+    return sessionsHits

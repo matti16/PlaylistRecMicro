@@ -16,7 +16,6 @@ def sendNotificationToRoberto(title,body):
     push = oneplus.push_note(title, body)
 
     
-sendNotificationToMattia("Ciao Mattia","Sono pronto!")
 
 
 

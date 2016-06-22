@@ -103,6 +103,19 @@ def gt1Creator(x, prop, mode='ts-1', TS=0):
     return (GT, REQ)
 
 
+def remove_zz_top(x):
+    ZZ_TOP = 3893303
+
+    objects = x['linkedinfo']['objects']
+    x['linkedinfo']['objects'] = []
+
+    for i in objects:
+        if i['id'] < ZZ_TOP:
+            x['linkedinfo']['objects'].append(i)
+    
+    return x
+
+
 
 def splitter(conf):
     prop = conf[SPLIT][PROP]
@@ -123,8 +136,9 @@ def splitter(conf):
     else:
         RDD = sc.textFile(conf[GENERAL][BUCKET] + "/" + conf[SPLIT][LOCATION])
 
-    readDataset = RDD.map(lambda x: json.loads(x)) \
-        .map(lambda x: (x[LINKEDINFO][SUBJECTS][0][ID], x)).persist(StorageLevel.MEMORY_AND_DISK)
+
+    readDataset = RDD.map(lambda x: json.loads(x)).map(remove_zz_top)
+    readDataset = readDataset.map(lambda x: (x[LINKEDINFO][SUBJECTS][0][ID], x)).persist(StorageLevel.MEMORY_AND_DISK)
 
     lowActUsersRDD = readDataset.map(lambda x: (x[0], 1)) \
         .reduceByKey(lambda x, y: x + y).filter(lambda x: x[1] <= minEventsPerUser).persist()

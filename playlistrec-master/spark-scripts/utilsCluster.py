@@ -81,7 +81,7 @@ def extract_ids(x):
 #Function to substitute the recommended clusters with their songs
 def plug_songs(x):
     rec_size = conf['split']['reclistSize']
-    rec_dict = json.loads(x[0])
+    rec_dict = list(x[1])[0][2]
     rec_dict['linkedinfo']['response'] = []
     sorted_songs = sorted(x[1], key = itemgetter(0))
     inserted = 0
@@ -101,7 +101,7 @@ def plug_songs(x):
 #All the songs in a cluster are good for the recommendation
 def all_cluster(x):
     rec_size = conf['split']['reclistSize']
-    rec_dict = json.loads(x[0])
+    rec_dict = list(x[1])[0][2]
     rec_dict['linkedinfo']['response'] = []
     sorted_songs = sorted(x[1], key = itemgetter(0))
     inserted = 0
@@ -143,7 +143,7 @@ def mapClusterRecToListOfSongs(recRDD, clusterRDD, option = "all_cluster"):
     #We have ClusterID -> (rank, Rec) and we join with ClusterIdD -> [songs]
     recJoinRDD = recFlatRDD.join(clustersRDD)
     #We have now (ClusterID, ( (rank, Rec), [songs]) )
-    recSub = recJoinRDD.map(lambda x: (json.dumps(x[1][0][1]), (x[1][0][0], x[1][1])))
+    recSub = recJoinRDD.map(lambda x: ( x[1][0][1]['id'], (x[1][0][0], x[1][1], x[1][0][1])))
     #We extract (Rec, rank, [songs]) and griup by Rec. Then we plug the songs
     if option == "plug_songs":
         recAgg = recSub.groupByKey().map(plug_songs)
